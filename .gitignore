@@ -1,0 +1,11 @@
+.env
+.env.*
+!.env.local.example
+.direnv/
+
+workspace/*
+!workspace/.gitkeep
+
+*.log
+*.tmp
+.DS_Store
