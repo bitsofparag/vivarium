@@ -1,0 +1,122 @@
+#!/bin/sh
+# keeper - agent-facing CLI inside a vivarium.
+
+set -eu
+
+check() {
+  name="$1"
+  shift
+  if command -v "$name" >/dev/null 2>&1; then
+    printf 'ok   %-22s %s\n' "$name" "$("$@" 2>&1 | head -n 1)"
+  else
+    printf 'MISS %-22s\n' "$name"
+  fi
+}
+
+keeper_doctor() {
+  printf '%s\n' '----- identity -----'
+  printf '  user  %s (%s:%s)\n' "$(id -un)" "$(id -u)" "$(id -g)"
+  if [ -d /workspace ]; then
+    printf '  mount /workspace owner=%s writable=%s\n' \
+      "$(stat -c '%u:%g' /workspace)" "$([ -w /workspace ] && printf yes || printf no)"
+  fi
+
+  printf '\n%s\n' '----- languages -----'
+  check go go version
+  check python python --version
+  check node node --version
+  check bun bun --version
+  check zig zig version
+  check rustc rustc --version
+
+  printf '\n%s\n' '----- package managers -----'
+  check uv uv --version
+  check npm npm --version
+  check yarn yarn --version
+  check pip pip --version
+
+  printf '\n%s\n' '----- vcs -----'
+  check git git --version
+  check delta delta --version
+  check gh gh --version
+  check lazygit lazygit --version
+
+  printf '\n%s\n' '----- search and shell -----'
+  check rg rg --version
+  check fd fd --version
+  check fzf fzf --version
+  check jq jq --version
+  check yq yq --version
+  check zsh zsh --version
+
+  printf '\n%s\n' '----- quality -----'
+  check golangci-lint golangci-lint --version
+  check ruff ruff --version
+  check black black --version
+  check basedpyright basedpyright --version
+  check shellcheck shellcheck --version
+  check shfmt shfmt --version
+  check eslint eslint --version
+  check prettier prettier --version
+  check editorconfig-checker editorconfig-checker --version
+  check gitleaks gitleaks version
+
+  printf '\n%s\n' '----- docs -----'
+  check pandoc pandoc --version
+  check typst typst --version
+  check d2 d2 --version
+
+  printf '\n%s\n' '----- agents -----'
+  check claude claude --version
+  check opencode opencode --version
+
+  printf '\n%s\n' '----- supply chain -----'
+  check syft syft version
+  check grype grype version
+  check docker docker --version
+}
+
+keeper_manifest() {
+  cat /etc/vivarium.manifest
+}
+
+keeper_run() {
+  [ "$#" -ge 1 ] || {
+    printf '%s\n' 'usage: keeper run <agent> [args...]' >&2
+    exit 2
+  }
+
+  agent="$1"
+  shift
+  command -v "$agent" >/dev/null 2>&1 || {
+    printf 'no such agent in this vivarium: %s\n' "$agent" >&2
+    exit 127
+  }
+  exec "$agent" "$@"
+}
+
+keeper_help() {
+  cat <<'EOF'
+keeper - CLI inside a vivarium
+
+  doctor              verify the toolchain and mount permissions (default)
+  manifest            print the resolved package set
+  run <agent> [args]  exec an installed agent in the workspace
+  help                show this message
+EOF
+}
+
+case "${1:-doctor}" in
+doctor) keeper_doctor ;;
+manifest) keeper_manifest ;;
+run)
+  shift
+  keeper_run "$@"
+  ;;
+help | --help | -h) keeper_help ;;
+*)
+  printf 'unknown command: %s\n' "$1" >&2
+  keeper_help
+  exit 1
+  ;;
+esac

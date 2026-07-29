@@ -1,0 +1,52 @@
+#!/bin/sh
+# vivarium-entrypoint - align container identity with the mounted volume.
+
+set -eu
+
+USERNAME="${VIVARIUM_USER:-agent}"
+WORKSPACE="${VIVARIUM_WORKSPACE:-/workspace}"
+
+log() {
+  printf '%s\n' "$*" >&2
+}
+
+remap_identity() {
+  [ "$(id -u)" -eq 0 ] || return 0
+  [ -n "${HOST_UID:-}" ] || return 0
+
+  cur_uid="$(id -u "$USERNAME")"
+  cur_gid="$(id -g "$USERNAME")"
+  new_uid="$HOST_UID"
+  new_gid="${HOST_GID:-$HOST_UID}"
+
+  [ "$cur_uid" = "$new_uid" ] && [ "$cur_gid" = "$new_gid" ] && return 0
+
+  groupmod -o -g "$new_gid" "$USERNAME"
+  usermod -o -u "$new_uid" -g "$new_gid" "$USERNAME"
+  chown -R "${new_uid}:${new_gid}" "/home/$USERNAME"
+  log "remapped $USERNAME to ${new_uid}:${new_gid}"
+}
+
+check_workspace() {
+  [ -d "$WORKSPACE" ] || return 0
+  [ -w "$WORKSPACE" ] && return 0
+  log "$WORKSPACE is not writable by $(id -un) ($(id -u):$(id -g))"
+  log "  mount is owned by $(stat -c '%u:%g' "$WORKSPACE")"
+  log "  rebuild with matching USER_UID/USER_GID, or start as root with HOST_UID set"
+}
+
+prepare_dirs() {
+  for d in "$HOME/.cache" "$HOME/.config" "$HOME/.local/bin" "$HOME/go/bin"; do
+    [ -d "$d" ] || mkdir -p "$d" 2>/dev/null || true
+  done
+}
+
+remap_identity
+prepare_dirs
+check_workspace
+
+if [ "$(id -u)" -eq 0 ] && [ "${DROP_PRIVILEGES:-1}" = "1" ] && [ -n "${HOST_UID:-}" ]; then
+  exec gosu "$USERNAME" "$@"
+fi
+
+exec "$@"
