@@ -6,9 +6,9 @@
 
 ```sh
 export VIVARIUM_WORKSPACE=/path/to/your/repo
-docker compose build
-docker compose run --rm vivarium keeper doctor   # verify the toolchain
-docker compose run --rm vivarium                 # interactive shell in /workspace
+just build
+just doctor   # verify the toolchain
+just shell    # interactive shell in /workspace
 ```
 
 
