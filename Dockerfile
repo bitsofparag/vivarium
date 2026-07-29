@@ -233,6 +233,7 @@ RUN install -d -o "${USER_UID}" -g "${USER_GID}" \
 
 COPY --chmod=0755 rootfs/usr/local/bin/vivarium-entrypoint /usr/local/bin/vivarium-entrypoint
 COPY --chmod=0755 rootfs/usr/local/bin/keeper /usr/local/bin/keeper
+COPY rootfs/etc/zsh/zshrc.d/vivarium.zsh /etc/zsh/zshrc.d/vivarium.zsh
 
 RUN apk info -v | sort > /etc/vivarium.manifest
 
