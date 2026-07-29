@@ -1,0 +1,66 @@
+services:
+  vivarium:
+    build:
+      context: .
+      args:
+        PYTHON_VERSION: "3.13"
+        NODE_MAJOR: "22"
+        # Rootful docker: your host uid/gid. Rootless docker: 0/0. See README.
+        USER_UID: "${VIVARIUM_UID:-1000}"
+        USER_GID: "${VIVARIUM_GID:-1000}"
+        INCLUDE_RUST: "0"
+        INCLUDE_ZIG: "1"
+        INCLUDE_DOCS: "1"
+        INCLUDE_SEMGREP: "0"
+        INCLUDE_AGENTS: "1"
+    image: vivarium:latest
+    init: false
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
+
+    volumes:
+      - type: bind
+        source: ${VIVARIUM_WORKSPACE:-./workspace}
+        target: /workspace
+
+      # Additional mounts. Prefer read_only for anything not being edited.
+      # - type: bind
+      #   source: /path/to/another/repo
+      #   target: /workspace/other-repo
+      # - type: bind
+      #   source: /path/to/datasets
+      #   target: /data
+      #   read_only: true
+
+      - vivarium-cache:/home/agent/.cache
+      - vivarium-go:/home/agent/go
+      - vivarium-state:/home/agent/.local/state
+
+      # Credentials, read-only. Uncomment only what the agent needs.
+      # - type: bind
+      #   source: ${HOME}/.ssh
+      #   target: /home/agent/.ssh
+      #   read_only: true
+      # - type: bind
+      #   source: ${HOME}/.gnupg
+      #   target: /home/agent/.gnupg
+      #   read_only: true
+
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GIT_AUTHOR_NAME: ${GIT_AUTHOR_NAME:-}
+      GIT_AUTHOR_EMAIL: ${GIT_AUTHOR_EMAIL:-}
+      GIT_COMMITTER_NAME: ${GIT_AUTHOR_NAME:-}
+      GIT_COMMITTER_EMAIL: ${GIT_AUTHOR_EMAIL:-}
+
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=2g
+
+volumes:
+  vivarium-cache:
+  vivarium-go:
+  vivarium-state:
