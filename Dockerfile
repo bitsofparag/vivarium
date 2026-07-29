@@ -156,7 +156,8 @@ ENV UV_TOOL_DIR=/opt/uv/tools \
     UV_LINK_MODE=copy \
     UV_PYTHON_DOWNLOADS=manual
 
-RUN uv tool install black && \
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv tool install black && \
     uv tool install isort && \
     uv tool install pylint && \
     uv tool install pytest && \
@@ -164,7 +165,8 @@ RUN uv tool install black && \
     uv tool install pre-commit && \
     uv tool install httpie
 
-RUN if [ "${INCLUDE_SEMGREP}" = "1" ]; then uv tool install semgrep; fi
+RUN --mount=type=cache,target=/root/.cache/uv \
+    if [ "${INCLUDE_SEMGREP}" = "1" ]; then uv tool install semgrep; fi
 
 # ----- node tooling -----
 ENV npm_config_prefix=/usr/local \
@@ -172,7 +174,8 @@ ENV npm_config_prefix=/usr/local \
     npm_config_audit=false \
     npm_config_update_notifier=false
 
-RUN npm install -g --no-progress \
+RUN --mount=type=cache,target=/root/.npm \
+    npm install -g --no-progress \
       typescript \
       typescript-language-server \
       eslint \
@@ -181,11 +184,11 @@ RUN npm install -g --no-progress \
       stylelint \
       stylelint-config-standard \
       yaml-language-server \
-      bash-language-server \
-    && npm cache clean --force
+      bash-language-server
 
-RUN if [ "${INCLUDE_AGENTS}" = "1" ]; then \
-      npm install -g --no-progress @anthropic-ai/claude-code opencode-ai && npm cache clean --force; \
+RUN --mount=type=cache,target=/root/.npm \
+    if [ "${INCLUDE_AGENTS}" = "1" ]; then \
+      npm install -g --no-progress @anthropic-ai/claude-code opencode-ai; \
     fi
 
 # ----- user -----
