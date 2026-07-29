@@ -42,8 +42,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     go install github.com/cweill/gotests/gotests@latest && \
     go install github.com/editorconfig-checker/editorconfig-checker/v3/cmd/editorconfig-checker@latest && \
     go install github.com/evilmartians/lefthook@latest && \
-    go install github.com/johnkerl/miller/cmd/mlr@latest && \
-    go install github.com/trufflesecurity/trufflehog/v3@latest
+    go install github.com/johnkerl/miller/v6/cmd/mlr@latest
 
 ARG INCLUDE_DOCS
 RUN --mount=type=cache,target=/root/.cache/go-build \
@@ -59,7 +58,7 @@ ARG INCLUDE_DOCS
 ARG PANDOC_VERSION=3.10.1
 ARG TYPST_VERSION=0.15.1
 
-RUN apk add --no-cache curl tar xz
+RUN apk add --no-cache curl xz
 
 WORKDIR /out
 
