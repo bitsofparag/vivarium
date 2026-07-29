@@ -1,0 +1,15 @@
+services:
+  vivarium:
+    volumes:
+      - type: bind
+        source: ${VIVARIUM_WORKSPACE:-./workspace}
+        target: /workspace
+
+      - type: bind
+        source: ${VIVARIUM_EXTRA_REPO:-../other-repo}
+        target: /workspace/other-repo
+
+      - type: bind
+        source: ${VIVARIUM_READ_ONLY_DATA:-../data}
+        target: /data
+        read_only: true
