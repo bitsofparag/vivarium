@@ -22,6 +22,9 @@ smoke:
 shell:
 	docker compose run --rm vivarium
 
+docker-shell:
+	docker compose -f compose.yaml -f examples/compose.docker-socket.yaml run --rm vivarium
+
 shellcheck:
 	shellcheck {{scripts}}
 
