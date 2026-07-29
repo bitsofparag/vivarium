@@ -8,11 +8,11 @@ services:
         # Rootful docker: your host uid/gid. Rootless docker: 0/0. See README.
         USER_UID: "${VIVARIUM_UID:-1000}"
         USER_GID: "${VIVARIUM_GID:-1000}"
-        INCLUDE_RUST: "0"
-        INCLUDE_ZIG: "1"
-        INCLUDE_DOCS: "1"
-        INCLUDE_SEMGREP: "0"
-        INCLUDE_AGENTS: "1"
+        INCLUDE_RUST: "${VIVARIUM_INCLUDE_RUST:-0}"
+        INCLUDE_ZIG: "${VIVARIUM_INCLUDE_ZIG:-1}"
+        INCLUDE_DOCS: "${VIVARIUM_INCLUDE_DOCS:-1}"
+        INCLUDE_SEMGREP: "${VIVARIUM_INCLUDE_SEMGREP:-0}"
+        INCLUDE_AGENTS: "${VIVARIUM_INCLUDE_AGENTS:-1}"
     image: vivarium:latest
     init: false
     working_dir: /workspace
@@ -49,6 +49,7 @@ services:
 
     environment:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      VIVARIUM_PROMPT: ${VIVARIUM_PROMPT:-}
       GIT_AUTHOR_NAME: ${GIT_AUTHOR_NAME:-}
       GIT_AUTHOR_EMAIL: ${GIT_AUTHOR_EMAIL:-}
       GIT_COMMITTER_NAME: ${GIT_AUTHOR_NAME:-}

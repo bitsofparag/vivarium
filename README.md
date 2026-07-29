@@ -35,7 +35,7 @@ You can find the correct inventory at `/etc/vivarium.manifest`, or via `keeper m
 
 ### Optional Tools
 
-Each is a build arg.
+Each is a build arg. If using Compose, set the matching `VIVARIUM_INCLUDE_*` value in `.env.local`.
 
 | Build arg         | Adds                  | Size    | Default |
 |-------------------|-----------------------|---------|---------|
