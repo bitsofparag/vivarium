@@ -20,14 +20,19 @@ ARG INCLUDE_AGENTS=1      # claude-code + opencode CLI
 
 
 # ----- stage 1: go tools with no wolfi package -----
-FROM ${WOLFI_BASE} AS gotools
+FROM --platform=$BUILDPLATFORM ${WOLFI_BASE} AS gotools
+
+ARG TARGETOS
+ARG TARGETARCH
 
 RUN apk add --no-cache go git build-base
 
 ENV GOBIN=/out \
     GOFLAGS=-trimpath \
     CGO_ENABLED=0 \
-    GOTOOLCHAIN=local
+    GOTOOLCHAIN=local \
+    GOOS=${TARGETOS} \
+    GOARCH=${TARGETARCH}
 
 RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/root/go/pkg/mod \
@@ -47,7 +52,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 
 
 # ----- stage 2: upstream static binaries with no wolfi package -----
-FROM ${WOLFI_BASE} AS binaries
+FROM --platform=$BUILDPLATFORM ${WOLFI_BASE} AS binaries
 
 ARG TARGETARCH
 ARG INCLUDE_DOCS
@@ -90,6 +95,7 @@ ARG NODE_MAJOR
 ARG USERNAME
 ARG USER_UID
 ARG USER_GID
+ARG WOLFI_BASE
 ARG INCLUDE_RUST
 ARG INCLUDE_ZIG
 ARG INCLUDE_DOCS
