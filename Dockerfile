@@ -104,7 +104,8 @@ ARG INCLUDE_AGENTS
 
 LABEL org.opencontainers.image.title="vivarium" \
       org.opencontainers.image.description="Self-contained environment for running coding agents against mounted folders" \
-      org.opencontainers.image.base.name="cgr.dev/chainguard/wolfi-base"
+      org.opencontainers.image.base.name="${WOLFI_BASE}" \
+      org.opencontainers.image.licenses="Apache-2.0"
 
 SHELL ["/bin/sh", "-eux", "-c"]
 
