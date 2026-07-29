@@ -143,8 +143,8 @@ RUN apk add --no-cache \
       gitleaks grype syft crane
 
 # Wolfi retires packages; these are nice-to-have and must not fail the build.
-RUN for p in tree-sitter actionlint lazydocker fastfetch neovim helm-4; do \
-      apk add --no-cache "$p" >/dev/null 2>&1 && echo "ok   $p" || echo "skip $p"; \
+RUN for p in tree-sitter actionlint; do \
+    apk add --no-cache "$p" >/dev/null 2>&1 || echo "skip $p"; \
     done
 
 COPY --from=gotools  /out/ /usr/local/bin/
