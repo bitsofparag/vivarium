@@ -1,12 +1,27 @@
 # vivarium
 
-(Yet another) Self-contained container environment for running AI agents.
+(Yet another) Docker image for running AI coding agents.
+
+Vivarium is a containerized development environment for agent runs. It includes common build, test, lint, shell, Git, container, and supply-chain tools for Go, Python, Node, and general Unix work.
+
+Build the image, publish it if needed, then run an agent with a repo mounted at `/workspace`. The mount is the boundary: files outside the mounted paths are not part of the working area.
+
 
 ## Quick-Start
 
+Build the image:
+
+```sh
+just build
+```
+
+Use this when publishing to a registry or configuring a runner such as Hermes (in its `config.yaml`).
+`VIVARIUM_WORKSPACE` is not needed for image builds.
+
+Run against a local project or repo with Compose:
+
 ```sh
 export VIVARIUM_WORKSPACE=/path/to/your/repo
-just build
 just doctor   # verify the toolchain
 just shell    # interactive shell in /workspace
 ```
@@ -48,8 +63,18 @@ The container uid 0 maps to your host user (uid 1000). Therefore, build with `US
 **Run a single agent task**
 `docker compose run --rm vivarium keeper run claude -p "fix the lint errors"`
 
+**Run Docker commands inside Vivarium**
+Vivarium includes Docker client tools, not a daemon. Mount a host socket only when the agent should control that daemon:
+
+```sh
+export VIVARIUM_DOCKER_SOCKET=/run/user/$(id -u)/docker.sock
+just docker-shell
+```
+
+Use `/var/run/docker.sock` instead for a rootful daemon, better for security.
+
 **Mount more than one folder**
-Add them under `volumes:` in `compose.yaml`. Keep the writable set small and mark the rest `read_only: true`.
+Add them under `volumes:` in `compose.yaml` (or `compose.override.yaml`). Keep the writable set small and mark the rest `read_only: true`.
 Writable mounts should share one owner on the host, because the container runs as a single user and can only match one uid.
 
 
@@ -57,7 +82,7 @@ Writable mounts should share one owner on the host, because the container runs a
 
 **Why Wolfi?** It is glibc-based, so binaries built inside the container behave the same as on a mainstream Linux host; musl (Alpine) would diverge. It also ships a rolling package set rather than a frozen release.
 
-**Does this sanbox the agent?** An agent working inside a vivarium can only touch the folders you handed it. If it deletes a file not in the mounted folder, installs a broken package, or fills the disk with build junk, the mess stays inside the container and your machine is unchanged. Delete the container and it is all gone.
+**Does this sandbox the agent?** An agent working inside a vivarium can only touch the folders you handed it. If it deletes a file not in the mounted folder, installs a broken package, or fills the disk with build junk, the mess stays inside the container and your machine is unchanged. Delete the container and it is all gone.
 
 **But LLMs could break out of the sandbox?** Yes, and I get asked this a lot. This project is built to stop accidents, and may not stop an agent from deliberately trying to break out. Top frontier models have been shown not to respect isolated environments. However, if this concerns you greatly, launch the vivarium container on a stronger runtime, e.g `docker run --runtime=runsc` for gVisor, or Kata Containers for a lightweight VM. Always remember that anything you mount as writable really can be changed or deleted, so mount only what the task needs. And the agent still has full internet access unless you turn networking off.
 
