@@ -2,9 +2,9 @@
 
 (Yet another) Docker image for running AI coding agents.
 
-Vivarium is a containerized development environment for agent runs. It includes common build, test, lint, shell, Git, container, and supply-chain tools for Go, Python, Node, and general Unix work.
+Vivarium is a containerized development environment for agent runs. It includes **the essentials**, viz. common build, test, lint, shell, Git, container, and supply-chain tools for Go, Python, Node, and general Unix work.
 
-Build the image, publish it if needed, then run an agent with a repo mounted at `/workspace`. The mount is the boundary: files outside the mounted paths are not part of the working area.
+Build the image, publish it if needed, then run an agent with a repo mounted at `/workspace`. The mount is the boundary: files outside the mounted paths are not part of the agent's working area.
 
 
 ## Quick-Start
@@ -16,9 +16,10 @@ just build
 ```
 
 Use this when publishing to a registry or configuring a runner such as Hermes (in its `config.yaml`).
-`VIVARIUM_WORKSPACE` is not needed for image builds.
 
-Run against a local project or repo with Compose:
+The published image includes the essentials above, as well as Zig, docs tooling, Claude Code/opencode; but excludes Rust and Semgrep. `VIVARIUM_WORKSPACE` is not needed for image builds.
+
+If launching the environment via Compose:
 
 ```sh
 export VIVARIUM_WORKSPACE=/path/to/your/repo
