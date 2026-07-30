@@ -27,7 +27,7 @@ ARG TARGETARCH
 
 RUN apk add --no-cache go git build-base
 
-ENV GOBIN=/out \
+ENV GOPATH=/root/go \
     GOFLAGS=-trimpath \
     CGO_ENABLED=0 \
     GOTOOLCHAIN=local \
@@ -42,12 +42,21 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     go install github.com/cweill/gotests/gotests@latest && \
     go install github.com/editorconfig-checker/editorconfig-checker/v3/cmd/editorconfig-checker@latest && \
     go install github.com/evilmartians/lefthook@latest && \
-    go install github.com/johnkerl/miller/v6/cmd/mlr@latest
+    go install github.com/johnkerl/miller/v6/cmd/mlr@latest && \
+    install -d /out && \
+    go_bin="${GOPATH}/bin"; \
+    if [ -d "${go_bin}/${GOOS}_${GOARCH}" ]; then go_bin="${go_bin}/${GOOS}_${GOARCH}"; fi; \
+    cp "${go_bin}"/* /out/
 
 ARG INCLUDE_DOCS
 RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/root/go/pkg/mod \
-    if [ "${INCLUDE_DOCS}" = "1" ]; then go install oss.terrastruct.com/d2@latest; fi
+    if [ "${INCLUDE_DOCS}" = "1" ]; then \
+      go install oss.terrastruct.com/d2@latest; \
+      go_bin="${GOPATH}/bin"; \
+      if [ -d "${go_bin}/${GOOS}_${GOARCH}" ]; then go_bin="${go_bin}/${GOOS}_${GOARCH}"; fi; \
+      cp "${go_bin}/d2" /out/; \
+    fi
 
 
 # ----- stage 2: upstream static binaries with no wolfi package -----
