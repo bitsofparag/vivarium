@@ -15,14 +15,13 @@ Build the image:
 just build
 ```
 
-Use this when publishing to a registry or configuring a runner such as Hermes (in its `config.yaml`).
+Use this when publishing to a registry or configuring a runner such as Hermes.
 
-The published image includes the essentials above, as well as Zig, docs tooling, Claude Code/opencode, rtk, CodeGraph, and caveman; but excludes Rust and Semgrep. `VIVARIUM_WORKSPACE` is not needed for image builds.
+The published image includes the essentials above, as well as Zig, docs tooling, Claude Code/opencode, rtk, CodeGraph, and caveman; but excludes Rust and Semgrep. Image builds do not need workspace mount config.
 
-If launching the environment via Compose:
+For local checks, Compose mounts the repository's `./workspace` directory at `/workspace`:
 
 ```sh
-export VIVARIUM_WORKSPACE=/path/to/your/repo
 just doctor   # verify the toolchain
 just shell    # interactive shell in /workspace
 ```

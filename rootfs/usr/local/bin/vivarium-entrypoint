@@ -4,7 +4,7 @@
 set -eu
 
 USERNAME="${VIVARIUM_USER:-agent}"
-WORKSPACE="${VIVARIUM_WORKSPACE:-/workspace}"
+WORKSPACE=/workspace
 
 log() {
   printf '%s\n' "$*" >&2

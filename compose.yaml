@@ -27,31 +27,12 @@ services:
 
     volumes:
       - type: bind
-        source: ${VIVARIUM_WORKSPACE:-./workspace}
+        source: ./workspace
         target: /workspace
-
-      # Additional mounts. Prefer read_only for anything not being edited.
-      # - type: bind
-      #   source: /path/to/another/repo
-      #   target: /workspace/other-repo
-      # - type: bind
-      #   source: /path/to/datasets
-      #   target: /data
-      #   read_only: true
 
       - vivarium-cache:/home/agent/.cache
       - vivarium-go:/home/agent/go
       - vivarium-state:/home/agent/.local/state
-
-      # Credentials, read-only. Uncomment only what the agent needs.
-      # - type: bind
-      #   source: ${HOME}/.ssh
-      #   target: /home/agent/.ssh
-      #   read_only: true
-      # - type: bind
-      #   source: ${HOME}/.gnupg
-      #   target: /home/agent/.gnupg
-      #   read_only: true
 
     environment:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}

@@ -1,9 +1,0 @@
-# Grants access to the selected host Docker daemon. Use only for trusted sessions.
-services:
-  vivarium:
-    environment:
-      DOCKER_HOST: unix:///var/run/docker.sock
-    volumes:
-      - type: bind
-        source: ${VIVARIUM_DOCKER_SOCKET:?set VIVARIUM_DOCKER_SOCKET}
-        target: /var/run/docker.sock
