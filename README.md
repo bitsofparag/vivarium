@@ -76,11 +76,8 @@ export VIVARIUM_DOCKER_SOCKET=/run/user/$(id -u)/docker.sock
 just docker-shell
 ```
 
-Use `/var/run/docker.sock` instead for a rootful daemon, better for security.
-
-**Mount more than one folder**
-Add them under `volumes:` in `compose.yaml` (or `compose.override.yaml`). Keep the writable set small and mark the rest `read_only: true`.
-Writable mounts should share one owner on the host, because the container runs as a single user and can only match one uid.
+**Run Docker commands inside Vivarium**
+Vivarium includes Docker client tools, not a daemon. If an agent should control a host Docker daemon, configure that socket mount in the runner and treat it as trusted access to the host.
 
 
 ## FAQ
