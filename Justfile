@@ -1,7 +1,7 @@
 set shell := ["sh", "-eu", "-c"]
 set dotenv-filename := ".env.local"
 
-scripts := "rootfs/usr/local/bin/keeper rootfs/usr/local/bin/vivarium-entrypoint tests/smoke.sh"
+scripts := "rootfs/usr/local/bin/keeper rootfs/usr/local/bin/transcribe-audio rootfs/usr/local/bin/vivarium-entrypoint tests/smoke.sh"
 hadolint_image := "hadolint/hadolint:v2.14.0"
 
 default:

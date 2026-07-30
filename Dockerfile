@@ -136,6 +136,7 @@ RUN apk add --no-cache \
       shadow sudo gosu tini busybox \
       ca-certificates curl wget openssh-client rsync \
       xz zstd pigz unzip zip 7zip libarchive \
+      ffmpeg \
       ripgrep fd fzf bat eza tree file less \
       jq yq xh jo \
       htop btop tmux stow direnv zoxide starship \
@@ -281,6 +282,7 @@ RUN install -d -o "${USER_UID}" -g "${USER_GID}" \
 
 COPY --chmod=0755 rootfs/usr/local/bin/vivarium-entrypoint /usr/local/bin/vivarium-entrypoint
 COPY --chmod=0755 rootfs/usr/local/bin/keeper /usr/local/bin/keeper
+COPY --chmod=0755 rootfs/usr/local/bin/transcribe-audio /usr/local/bin/transcribe-audio
 COPY rootfs/etc/zsh/zshrc.d/vivarium.zsh /etc/zsh/zshrc.d/vivarium.zsh
 
 RUN apk info -v | sort > /etc/vivarium.manifest

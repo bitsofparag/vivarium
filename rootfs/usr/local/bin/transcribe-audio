@@ -1,0 +1,101 @@
+#!/bin/sh
+# transcribe-audio - send an audio file to a configured transcription backend.
+
+set -eu
+
+usage() {
+  cat <<'EOF'
+usage: transcribe-audio <audio-file> [whisper-cli args...]
+
+Backends, in order:
+  TRANSCRIBE_URL      POST multipart file to this endpoint
+  OPENAI_API_KEY      call OpenAI /audio/transcriptions
+  WHISPER_MODEL       run local whisper-cli with this model path
+
+Optional:
+  TRANSCRIBE_RESPONSE_FORMAT  default: json
+  TRANSCRIBE_AUTH_HEADER      extra header for TRANSCRIBE_URL
+  OPENAI_BASE_URL             default: https://api.openai.com/v1
+  OPENAI_TRANSCRIBE_MODEL     default: gpt-4o-transcribe
+EOF
+}
+
+die() {
+  printf '%s\n' "$*" >&2
+  exit 2
+}
+
+emit_response() {
+  response="$1"
+  format="${TRANSCRIBE_RESPONSE_FORMAT:-json}"
+
+  if [ "$format" = "json" ] && command -v jq >/dev/null 2>&1 && jq -e . "$response" >/dev/null 2>&1; then
+    jq -r '.text // .transcript // .' "$response"
+  else
+    cat "$response"
+  fi
+}
+
+[ "${1:-}" != "--help" ] || {
+  usage
+  exit 0
+}
+
+[ "$#" -ge 1 ] || {
+  usage >&2
+  exit 2
+}
+
+input="$1"
+shift
+
+[ -r "$input" ] || die "audio file is not readable: $input"
+
+response_format="${TRANSCRIBE_RESPONSE_FORMAT:-json}"
+tmpdir="$(mktemp -d)"
+trap 'rm -rf "$tmpdir"' EXIT INT TERM
+
+if [ -n "${TRANSCRIBE_URL:-}" ]; then
+  response="$tmpdir/response"
+  if [ -n "${TRANSCRIBE_AUTH_HEADER:-}" ]; then
+    curl -fsS -o "$response" \
+      -H "$TRANSCRIBE_AUTH_HEADER" \
+      -F "file=@${input}" \
+      -F "response_format=${response_format}" \
+      "$TRANSCRIBE_URL"
+  else
+    curl -fsS -o "$response" \
+      -F "file=@${input}" \
+      -F "response_format=${response_format}" \
+      "$TRANSCRIBE_URL"
+  fi
+  emit_response "$response"
+  exit 0
+fi
+
+if [ -n "${OPENAI_API_KEY:-}" ]; then
+  response="$tmpdir/response"
+  base_url="${OPENAI_BASE_URL:-https://api.openai.com/v1}"
+  model="${OPENAI_TRANSCRIBE_MODEL:-gpt-4o-transcribe}"
+  curl -fsS -o "$response" \
+    -H "Authorization: Bearer ${OPENAI_API_KEY}" \
+    -F "file=@${input}" \
+    -F "model=${model}" \
+    -F "response_format=${response_format}" \
+    "${base_url%/}/audio/transcriptions"
+  emit_response "$response"
+  exit 0
+fi
+
+if [ -n "${WHISPER_MODEL:-}" ]; then
+  command -v whisper-cli >/dev/null 2>&1 || die "WHISPER_MODEL is set, but whisper-cli is not on PATH"
+  command -v ffmpeg >/dev/null 2>&1 || die "ffmpeg is required for local whisper-cli transcription"
+  [ -r "$WHISPER_MODEL" ] || die "WHISPER_MODEL is not readable: $WHISPER_MODEL"
+
+  wav="$tmpdir/input.wav"
+  ffmpeg -nostdin -loglevel error -y -i "$input" -ar 16000 -ac 1 -c:a pcm_s16le "$wav"
+  whisper-cli -m "$WHISPER_MODEL" -f "$wav" "$@"
+  exit 0
+fi
+
+die "no transcription backend configured; set TRANSCRIBE_URL, OPENAI_API_KEY, or WHISPER_MODEL"

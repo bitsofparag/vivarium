@@ -29,7 +29,7 @@ just shell    # interactive shell in /workspace
 
 ## What's Inside the Toolchain
 
-A Wolfi (glibc) base carrying toolchains for Go, Python and Node, as well as the usual shell, version control, language linting and formatting tooling, container and supply-chain utilities, and secrets tooling. In other words, everything an agent needs to build, test and lint a polyglot repo without reaching outside the container.
+A Wolfi (glibc) base carrying toolchains for Go, Python and Node, as well as the usual shell, version control, language linting and formatting tooling, container and supply-chain utilities, media conversion, and secrets tooling. In other words, everything an agent needs to build, test and lint a polyglot repo without reaching outside the container.
 
 You can find the correct inventory at `/etc/vivarium.manifest`, or via `keeper manifest`.
 

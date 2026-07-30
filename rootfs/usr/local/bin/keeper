@@ -66,6 +66,10 @@ keeper_doctor() {
   check typst typst --version
   check d2 d2 --version
 
+  printf '\n%s\n' '----- media -----'
+  check ffmpeg ffmpeg -version
+  check transcribe-audio transcribe-audio --help
+
   printf '\n%s\n' '----- agents -----'
   check claude claude --version
   check opencode opencode --version
