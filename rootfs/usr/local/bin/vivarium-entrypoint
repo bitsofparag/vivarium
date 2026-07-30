@@ -36,7 +36,7 @@ check_workspace() {
 }
 
 prepare_dirs() {
-  for d in "$HOME/.cache" "$HOME/.config" "$HOME/.local/bin" "$HOME/go/bin"; do
+  for d in "$HOME/.cache" "$HOME/.config" "$HOME/.local/bin" "$HOME/.local/share" "$HOME/.local/state" "$HOME/go/bin"; do
     [ -d "$d" ] || mkdir -p "$d" 2>/dev/null || true
   done
 }

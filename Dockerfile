@@ -265,7 +265,9 @@ ENV HOME=/home/${USERNAME} \
     PATH=/home/${USERNAME}/.local/bin:/home/${USERNAME}/go/bin:/home/${USERNAME}/.bun/bin:/home/${USERNAME}/.cargo/bin:/usr/local/bin:/usr/bin:/bin
 
 RUN install -d -o "${USER_UID}" -g "${USER_GID}" \
+      "/home/${USERNAME}/.local" \
       "/home/${USERNAME}/.local/bin" \
+      "/home/${USERNAME}/.local/share" \
       "/home/${USERNAME}/.config" \
       "/home/${USERNAME}/.cache" \
       "/home/${USERNAME}/.local/state" \
