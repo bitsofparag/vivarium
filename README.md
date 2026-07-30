@@ -38,13 +38,18 @@ You can find the correct inventory at `/etc/vivarium.manifest`, or via `keeper m
 
 Each is a build arg. If using Compose, set the matching `VIVARIUM_INCLUDE_*` value in `.env.local`.
 
-| Build arg         | Adds                  | Size    | Default |
-|-------------------|-----------------------|---------|---------|
-| `INCLUDE_ZIG`     | zig                   | ~180 MB | on      |
-| `INCLUDE_DOCS`    | pandoc, typst, d2     | ~250 MB | on      |
-| `INCLUDE_AGENTS`  | claude-code, opencode | ~150 MB | on      |
-| `INCLUDE_RUST`    | rustup, rust-analyzer | ~1.2 GB | off     |
-| `INCLUDE_SEMGREP` | semgrep               | ~400 MB | off     |
+| Build arg           | Adds                  | Size    | Default |
+|---------------------|-----------------------|---------|---------|
+| `INCLUDE_ZIG`       | zig                   | ~180 MB | on      |
+| `INCLUDE_DOCS`      | pandoc, typst, d2     | ~250 MB | on      |
+| `INCLUDE_AGENTS`    | claude-code, opencode | ~150 MB | on      |
+| `INCLUDE_RTK`       | rtk                   | small   | on      |
+| `INCLUDE_CODEGRAPH` | codegraph CLI         | small   | on      |
+| `INCLUDE_CAVEMAN`   | caveman command       | small   | on      |
+| `INCLUDE_RUST`      | rustup, rust-analyzer | ~1.2 GB | off     |
+| `INCLUDE_SEMGREP`   | semgrep               | ~400 MB | off     |
+
+`RTK_VERSION` pins the rtk release. `CODEGRAPH_VERSION` pins the npm package version or tag. `CAVEMAN_REF` pins the GitHub ref used for the installed `caveman` command.
 
 
 ## How-to

@@ -17,6 +17,13 @@ ARG INCLUDE_ZIG=1         # zig compiler
 ARG INCLUDE_DOCS=1        # pandoc + typst + d2
 ARG INCLUDE_SEMGREP=0     # semgrep static analysis
 ARG INCLUDE_AGENTS=1      # claude-code + opencode CLI
+ARG INCLUDE_RTK=1         # rtk command runner
+ARG INCLUDE_CODEGRAPH=1   # codegraph repository indexer
+ARG INCLUDE_CAVEMAN=1     # caveman agent instructions installer
+
+ARG RTK_VERSION=
+ARG CODEGRAPH_VERSION=
+ARG CAVEMAN_REF=v1.9.1
 
 
 # ----- stage 1: go tools with no wolfi package -----
@@ -109,6 +116,12 @@ ARG INCLUDE_ZIG
 ARG INCLUDE_DOCS
 ARG INCLUDE_SEMGREP
 ARG INCLUDE_AGENTS
+ARG INCLUDE_RTK
+ARG INCLUDE_CODEGRAPH
+ARG INCLUDE_CAVEMAN
+ARG RTK_VERSION
+ARG CODEGRAPH_VERSION
+ARG CAVEMAN_REF
 
 LABEL org.opencontainers.image.title="vivarium" \
       org.opencontainers.image.description="Self-contained environment for running coding agents against mounted folders" \
@@ -198,6 +211,25 @@ RUN --mount=type=cache,target=/root/.npm \
 RUN --mount=type=cache,target=/root/.npm \
     if [ "${INCLUDE_AGENTS}" = "1" ]; then \
       npm install -g --no-progress @anthropic-ai/claude-code opencode-ai; \
+# ----- agent helpers -----
+RUN set -eu; \
+    if [ "${INCLUDE_RTK}" = "1" ]; then \
+      tmp="$(mktemp)"; \
+      trap 'rm -f "$tmp"' EXIT; \
+      curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh -o "$tmp"; \
+      RTK_INSTALL_DIR=/usr/local/bin RTK_VERSION="${RTK_VERSION}" sh "$tmp"; \
+    fi
+
+RUN --mount=type=cache,target=/root/.npm \
+    if [ "${INCLUDE_CODEGRAPH}" = "1" ]; then \
+      package="@colbymchenry/codegraph"; \
+      if [ -n "${CODEGRAPH_VERSION}" ]; then package="${package}@${CODEGRAPH_VERSION}"; fi; \
+      npm install -g --no-progress "$package"; \
+    fi
+
+RUN --mount=type=cache,target=/root/.npm \
+    if [ "${INCLUDE_CAVEMAN}" = "1" ]; then \
+      npm install -g --no-progress --allow-git=all "github:JuliusBrussee/caveman#${CAVEMAN_REF}"; \
     fi
 
 # ----- user -----
@@ -228,6 +260,7 @@ ENV HOME=/home/${USERNAME} \
     BUN_INSTALL=/home/${USERNAME}/.bun \
     CARGO_HOME=/home/${USERNAME}/.cargo \
     RUSTUP_HOME=/home/${USERNAME}/.rustup \
+    CAVEMAN_REF=${CAVEMAN_REF} \
     VIVARIUM_USER=${USERNAME} \
     PATH=/home/${USERNAME}/.local/bin:/home/${USERNAME}/go/bin:/home/${USERNAME}/.bun/bin:/home/${USERNAME}/.cargo/bin:/usr/local/bin:/usr/bin:/bin
 

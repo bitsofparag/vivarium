@@ -70,6 +70,11 @@ keeper_doctor() {
   check claude claude --version
   check opencode opencode --version
 
+  printf '\n%s\n' '----- agent helpers -----'
+  check caveman caveman --help
+  check rtk rtk --version
+  check codegraph codegraph --version
+
   printf '\n%s\n' '----- supply chain -----'
   check syft syft version
   check grype grype version
