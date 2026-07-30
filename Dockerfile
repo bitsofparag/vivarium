@@ -288,5 +288,5 @@ RUN apk info -v | sort > /etc/vivarium.manifest
 WORKDIR /workspace
 USER ${USERNAME}
 
-ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/vivarium-entrypoint"]
+ENTRYPOINT ["/sbin/tini", "-s", "--", "/usr/local/bin/vivarium-entrypoint"]
 CMD ["/bin/zsh", "-l"]
