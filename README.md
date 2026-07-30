@@ -17,7 +17,7 @@ just build
 
 Use this when publishing to a registry or configuring a runner such as Hermes (in its `config.yaml`).
 
-The published image includes the essentials above, as well as Zig, docs tooling, Claude Code/opencode; but excludes Rust and Semgrep. `VIVARIUM_WORKSPACE` is not needed for image builds.
+The published image includes the essentials above, as well as Zig, docs tooling, Claude Code/opencode, rtk, CodeGraph, and caveman; but excludes Rust and Semgrep. `VIVARIUM_WORKSPACE` is not needed for image builds.
 
 If launching the environment via Compose:
 

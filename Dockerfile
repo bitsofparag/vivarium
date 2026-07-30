@@ -210,7 +210,11 @@ RUN --mount=type=cache,target=/root/.npm \
 
 RUN --mount=type=cache,target=/root/.npm \
     if [ "${INCLUDE_AGENTS}" = "1" ]; then \
-      npm install -g --no-progress @anthropic-ai/claude-code opencode-ai; \
+      npm install -g --no-progress \
+        --allow-scripts=@anthropic-ai/claude-code,opencode-ai \
+        @anthropic-ai/claude-code opencode-ai; \
+    fi
+
 # ----- agent helpers -----
 RUN set -eu; \
     if [ "${INCLUDE_RTK}" = "1" ]; then \
