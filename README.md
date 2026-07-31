@@ -15,9 +15,7 @@ Build the image:
 just build
 ```
 
-Use this when publishing to a registry or configuring a runner such as Hermes.
-
-The published image includes the essentials above, as well as Zig, docs tooling, Claude Code/opencode, rtk, CodeGraph, and caveman; but excludes Rust and Semgrep. Image builds do not need workspace mount config.
+Use this when publishing to a registry or configuring a runner such as Hermes. The published image includes the essentials above, as well as Zig, docs tooling, Claude Code/opencode, rtk, CodeGraph, and caveman; but excludes Rust and Semgrep.
 
 For local checks, Compose mounts the repository's `./workspace` directory at `/workspace`:
 
@@ -31,7 +29,7 @@ just shell    # interactive shell in /workspace
 
 A Wolfi (glibc) base carrying toolchains for Go, Python and Node, as well as the usual shell, version control, language linting and formatting tooling, container and supply-chain utilities, media conversion, and secrets tooling. In other words, everything an agent needs to build, test and lint a polyglot repo without reaching outside the container.
 
-You can find the correct inventory at `/etc/vivarium.manifest`, or via `keeper manifest`.
+You can find the exact inventory at `/etc/vivarium.manifest`, or via `keeper manifest`.
 
 ### Optional Tools
 
@@ -53,30 +51,56 @@ Each is a build arg. If using Compose, set the matching `VIVARIUM_INCLUDE_*` val
 
 ## How-to
 
-**Match a Python/Node pair**
+**Match a Python/Node pair:**
+
 `docker build --build-arg PYTHON_VERSION=3.11 --build-arg NODE_MAJOR=20 -t vivarium .`
 
-**Shrink the image**
+**Shrink the image:**
+
 `--build-arg INCLUDE_DOCS=0 --build-arg INCLUDE_ZIG=0 --build-arg INCLUDE_AGENTS=0`
 
-**Fix "permission denied" on /workspace**
-`keeper doctor` prints the mount's owner uid:gid. Rebuild with those as `USER_UID`/`USER_GID`.
+**Fix "permission denied" on /workspace:**
 
-**Run under rootless Docker**
-The container uid 0 maps to your host user (uid 1000). Therefore, build with `USER_UID=0 USER_GID=0`, or start as root and let the entrypoint remap: `docker run --user 0:0 -e HOST_UID=0 ...`
+`keeper doctor` prints the mount's owner uid:gid.
 
-**Run a single agent task**
-`docker compose run --rm vivarium keeper run claude -p "fix the lint errors"`
+- With Compose or `just build`, set `VIVARIUM_UID`/`VIVARIUM_GID`.
+- With plain `docker build`, pass `USER_UID`/`USER_GID` as build args.
 
-**Run Docker commands inside Vivarium**
-Vivarium includes Docker client tools, not a daemon. Mount a host socket only when the agent should control that daemon:
+**Fix "permission denied" inside a mounted folder:**
+
+`docker_run_as_host_user: true` preserves host Unix permissions. A mounted directory owned by `root` with mode `744` cannot be entered by `agent`, because directory traversal needs execute permission. Fix ownership or ACLs on the host path before starting Hermes:
 
 ```sh
-export VIVARIUM_DOCKER_SOCKET=/run/user/$(id -u)/docker.sock
-just docker-shell
+stat -c '%U:%G %a %n' "/path/to/mounted/folder"
+sudo chown -R "$(id -u):$(id -g)" "/path/to/mounted/folder"
+find "/path/to/mounted/folder" -type d -exec chmod u+rwx {} +
+find "/path/to/mounted/folder" -type f -exec chmod u+rw {} +
 ```
 
-**Run Docker commands inside Vivarium**
+Use a group ACL instead of `chown` when that folder is shared with other host users. `keeper doctor` reports inaccessible mounted directories under `/workspace` and `/output`.
+
+**Run under rootless Docker:**
+
+The container uid 0 maps to your host user (uid 1000). Therefore, build the Compose image with `VIVARIUM_UID=0 VIVARIUM_GID=0 just build`, or pass `--build-arg USER_UID=0 --build-arg USER_GID=0` to `docker build`. In Hermes, use `docker_run_as_host_user: false` for this shape.
+
+**Run a single agent task:** `docker compose run --rm vivarium keeper run claude -p "fix the lint errors"`
+
+**Agent helper CLIs:**
+
+Vivarium includes `rtk`, `codegraph`, and `caveman` as commands. Their init/install commands are intentionally not run during image build, because they write user, agent, or project config. Run those commands only in a persisted location, such as a mounted repo for `.codegraph/` or a mounted agent config directory.
+
+**Transcribe audio:**
+
+Vivarium includes `ffmpeg` and a `transcribe-audio` helper, but no Whisper model files. Configure transcription at the runner level:
+
+```sh
+transcribe-audio meeting.m4a > meeting.txt
+```
+
+`transcribe-audio` uses `TRANSCRIBE_URL` first, then OpenAI's transcription API when `OPENAI_API_KEY` is set, then a local `whisper-cli` only when `WHISPER_MODEL` points at a mounted model. Keep large models or Whisper servers outside the base image.
+
+**Run Docker commands inside Vivarium:**
+
 Vivarium includes Docker client tools, not a daemon. If an agent should control a host Docker daemon, configure that socket mount in the runner and treat it as trusted access to the host.
 
 
