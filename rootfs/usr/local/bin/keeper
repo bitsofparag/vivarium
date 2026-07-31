@@ -13,13 +13,49 @@ check() {
   fi
 }
 
+can_read() {
+  [ -r "$1" ] && printf yes || printf no
+}
+
+can_write() {
+  [ -w "$1" ] && printf yes || printf no
+}
+
+can_enter() {
+  [ -x "$1" ] && printf yes || printf no
+}
+
+path_access() {
+  path="$1"
+  printf '%s owner=%s mode=%s readable=%s executable=%s writable=%s' \
+    "$path" \
+    "$(stat -c '%u:%g' "$path")" \
+    "$(stat -c '%a' "$path")" \
+    "$(can_read "$path")" \
+    "$(can_enter "$path")" \
+    "$(can_write "$path")"
+}
+
+check_mounts() {
+  for root in /workspace /output; do
+    [ -e "$root" ] || continue
+    printf '  mount %s\n' "$(path_access "$root")"
+    [ -d "$root" ] || continue
+
+    find "$root" -maxdepth 4 -type d 2>/dev/null | while IFS= read -r path; do
+      [ "$path" = "$root" ] && continue
+      [ -r "$path" ] && [ -x "$path" ] && continue
+      printf '  WARN  inaccessible-dir %s\n' "$(path_access "$path")"
+    done
+  done
+}
+
 keeper_doctor() {
   printf '%s\n' '----- identity -----'
   printf '  user  %s (%s:%s)\n' "$(id -un)" "$(id -u)" "$(id -g)"
-  if [ -d /workspace ]; then
-    printf '  mount /workspace owner=%s writable=%s\n' \
-      "$(stat -c '%u:%g' /workspace)" "$([ -w /workspace ] && printf yes || printf no)"
-  fi
+
+  printf '\n%s\n' '----- mounts -----'
+  check_mounts
 
   printf '\n%s\n' '----- languages -----'
   check go go version

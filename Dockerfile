@@ -238,7 +238,7 @@ RUN --mount=type=cache,target=/root/.npm \
     fi
 
 # ----- user -----
-RUN if ! getent group "${USER_GID}" >/dev/null; then groupadd --gid "${USER_GID}" "${USERNAME}"; fi && \
+RUN if ! awk -F: -v gid="${USER_GID}" '$3 == gid { found = 1 } END { exit !found }' /etc/group; then groupadd --gid "${USER_GID}" "${USERNAME}"; fi && \
     useradd -o --uid "${USER_UID}" --gid "${USER_GID}" --shell /bin/zsh --create-home "${USERNAME}" && \
     echo "${USERNAME} ALL=(ALL) NOPASSWD: ALL" > "/etc/sudoers.d/${USERNAME}" && \
     chmod 0440 "/etc/sudoers.d/${USERNAME}"
