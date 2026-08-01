@@ -3,6 +3,9 @@
 set -eu
 
 log_file="${TMPDIR:-/tmp}/vivarium-smoke.log"
+expected_user="${VIVARIUM_EXPECTED_USER:-root}"
+expected_uid="${VIVARIUM_EXPECTED_UID:-0}"
+expected_home="${VIVARIUM_EXPECTED_HOME:-/root}"
 : >"$log_file"
 
 run_logged() {
@@ -13,7 +16,20 @@ run_logged() {
 }
 
 run_logged docker compose run --rm vivarium keeper doctor
-run_logged docker compose run --rm vivarium sh -lc 'command -v keeper >/dev/null; test -w /workspace'
+# shellcheck disable=SC2016
+run_logged docker compose run --rm \
+  -e VIVARIUM_EXPECTED_USER="$expected_user" \
+  -e VIVARIUM_EXPECTED_UID="$expected_uid" \
+  -e VIVARIUM_EXPECTED_HOME="$expected_home" \
+  vivarium sh -lc '
+    set -eu
+    command -v keeper >/dev/null
+    test -w /workspace
+    test "$(id -un)" = "$VIVARIUM_EXPECTED_USER"
+    test "$(id -u)" = "$VIVARIUM_EXPECTED_UID"
+    test "$HOME" = "$VIVARIUM_EXPECTED_HOME"
+    test "$(awk -F: -v uid="$VIVARIUM_EXPECTED_UID" '\''$3 == uid { count++ } END { print count + 0 }'\'' /etc/passwd)" = 1
+  '
 
 timezone_check='
 from datetime import datetime, timezone

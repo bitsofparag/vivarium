@@ -8,9 +8,10 @@ ARG PYTHON_VERSION=3.13
 ARG NODE_MAJOR=22
 
 # Must match the effective owner of the mounted volume. See README.
-ARG USERNAME=agent
-ARG USER_UID=1000
-ARG USER_GID=1000
+ARG USERNAME=root
+ARG USER_UID=0
+ARG USER_GID=0
+ARG USER_HOME=/root
 
 ARG INCLUDE_RUST=0        # rustup toolchain
 ARG INCLUDE_ZIG=1         # zig compiler
@@ -24,6 +25,30 @@ ARG INCLUDE_CAVEMAN=1     # caveman agent instructions installer
 ARG RTK_VERSION=
 ARG CODEGRAPH_VERSION=
 ARG CAVEMAN_REF=v1.9.1
+
+
+# ---- Validate build-time identity settings ---
+# If username is root, uid and gid = 0
+# If username is not root, uid and gid > 0
+FROM ${WOLFI_BASE} AS identity
+
+ARG USERNAME
+ARG USER_UID
+ARG USER_GID
+ARG USER_HOME
+
+RUN set -eu; \
+    case "${USER_HOME}" in /*) ;; *) echo "USER_HOME must be absolute" >&2; exit 1 ;; esac; \
+    if [ "${USERNAME}" = "root" ]; then \
+      if [ "${USER_UID}" != "0" ] || [ "${USER_GID}" != "0" ] || [ "${USER_HOME}" != "/root" ]; then \
+        echo "root identity requires USER_UID=0, USER_GID=0, and USER_HOME=/root" >&2; \
+        exit 1; \
+      fi; \
+    elif [ "${USER_UID}" = "0" ] || [ "${USER_GID}" = "0" ]; then \
+      echo "non-root identity requires non-zero USER_UID and USER_GID" >&2; \
+      exit 1; \
+    fi; \
+    touch /identity-valid
 
 
 # ----- stage 1: go tools with no wolfi package -----
@@ -103,13 +128,10 @@ RUN chmod 0755 /out/*
 
 
 # ----- stage 3: runtime -----
-FROM ${WOLFI_BASE} AS runtime
+FROM ${WOLFI_BASE} AS runtime-common
 
 ARG PYTHON_VERSION
 ARG NODE_MAJOR
-ARG USERNAME
-ARG USER_UID
-ARG USER_GID
 ARG WOLFI_BASE
 ARG INCLUDE_RUST
 ARG INCLUDE_ZIG
@@ -237,12 +259,6 @@ RUN --mount=type=cache,target=/root/.npm \
       npm install -g --no-progress --allow-git=all "github:JuliusBrussee/caveman#${CAVEMAN_REF}"; \
     fi
 
-# ----- user -----
-RUN if ! awk -F: -v gid="${USER_GID}" '$3 == gid { found = 1 } END { exit !found }' /etc/group; then groupadd --gid "${USER_GID}" "${USERNAME}"; fi && \
-    useradd -o --uid "${USER_UID}" --gid "${USER_GID}" --shell /bin/zsh --create-home "${USERNAME}" && \
-    echo "${USERNAME} ALL=(ALL) NOPASSWD: ALL" > "/etc/sudoers.d/${USERNAME}" && \
-    chmod 0440 "/etc/sudoers.d/${USERNAME}"
-
 # Mounted trees are owned by a foreign uid; without safe.directory every git
 # command in the workspace fails with "detected dubious ownership".
 RUN git config --system --add safe.directory '*' && \
@@ -251,33 +267,55 @@ RUN git config --system --add safe.directory '*' && \
     git config --system delta.navigate true && \
     git config --system delta.line-numbers true
 
+FROM runtime-common AS runtime
+
+ARG USERNAME
+ARG USER_UID
+ARG USER_GID
+ARG USER_HOME
+ARG CAVEMAN_REF
+
+COPY --from=identity /identity-valid /etc/vivarium.identity
+
+# ----- user -----
+RUN if [ "${USERNAME}" != "root" ]; then \
+      if ! awk -F: -v gid="${USER_GID}" '$3 == gid { found = 1 } END { exit !found }' /etc/group; then \
+        groupadd --gid "${USER_GID}" "${USERNAME}"; \
+      fi; \
+      useradd --uid "${USER_UID}" --gid "${USER_GID}" --home-dir "${USER_HOME}" \
+        --shell /bin/zsh --create-home "${USERNAME}"; \
+      echo "${USERNAME} ALL=(ALL) NOPASSWD: ALL" > "/etc/sudoers.d/${USERNAME}"; \
+      chmod 0440 "/etc/sudoers.d/${USERNAME}"; \
+    fi
+
 # ----- environment -----
-ENV HOME=/home/${USERNAME} \
+ENV HOME=${USER_HOME} \
     USER=${USERNAME} \
     SHELL=/bin/zsh \
     LANG=C.UTF-8 \
-    XDG_CONFIG_HOME=/home/${USERNAME}/.config \
-    XDG_DATA_HOME=/home/${USERNAME}/.local/share \
-    XDG_CACHE_HOME=/home/${USERNAME}/.cache \
-    XDG_STATE_HOME=/home/${USERNAME}/.local/state \
-    GOPATH=/home/${USERNAME}/go \
+    XDG_CONFIG_HOME=${USER_HOME}/.config \
+    XDG_DATA_HOME=${USER_HOME}/.local/share \
+    XDG_CACHE_HOME=${USER_HOME}/.cache \
+    XDG_STATE_HOME=${USER_HOME}/.local/state \
+    GOPATH=${USER_HOME}/go \
     GOTOOLCHAIN=local \
-    BUN_INSTALL=/home/${USERNAME}/.bun \
-    CARGO_HOME=/home/${USERNAME}/.cargo \
-    RUSTUP_HOME=/home/${USERNAME}/.rustup \
+    BUN_INSTALL=${USER_HOME}/.bun \
+    CARGO_HOME=${USER_HOME}/.cargo \
+    RUSTUP_HOME=${USER_HOME}/.rustup \
     CAVEMAN_REF=${CAVEMAN_REF} \
     VIVARIUM_USER=${USERNAME} \
-    PATH=/home/${USERNAME}/.local/bin:/home/${USERNAME}/go/bin:/home/${USERNAME}/.bun/bin:/home/${USERNAME}/.cargo/bin:/usr/local/bin:/usr/bin:/bin
+    VIVARIUM_USER_HOME=${USER_HOME} \
+    PATH=${USER_HOME}/.local/bin:${USER_HOME}/go/bin:${USER_HOME}/.bun/bin:${USER_HOME}/.cargo/bin:/usr/local/bin:/usr/bin:/bin
 
 RUN install -d -o "${USER_UID}" -g "${USER_GID}" \
-      "/home/${USERNAME}/.local" \
-      "/home/${USERNAME}/.local/bin" \
-      "/home/${USERNAME}/.local/share" \
-      "/home/${USERNAME}/.config" \
-      "/home/${USERNAME}/.cache" \
-      "/home/${USERNAME}/.local/state" \
-      "/home/${USERNAME}/go/bin" \
-      "/home/${USERNAME}/.bun/bin" \
+      "${USER_HOME}/.local" \
+      "${USER_HOME}/.local/bin" \
+      "${USER_HOME}/.local/share" \
+      "${USER_HOME}/.config" \
+      "${USER_HOME}/.cache" \
+      "${USER_HOME}/.local/state" \
+      "${USER_HOME}/go/bin" \
+      "${USER_HOME}/.bun/bin" \
       /workspace
 
 COPY --chmod=0755 rootfs/usr/local/bin/vivarium-entrypoint /usr/local/bin/vivarium-entrypoint

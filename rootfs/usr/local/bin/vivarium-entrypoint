@@ -4,6 +4,7 @@
 set -eu
 
 USERNAME="${VIVARIUM_USER:-agent}"
+USER_HOME="${VIVARIUM_USER_HOME:-/home/$USERNAME}"
 WORKSPACE=/workspace
 
 log() {
@@ -23,7 +24,7 @@ remap_identity() {
 
   groupmod -o -g "$new_gid" "$USERNAME"
   usermod -o -u "$new_uid" -g "$new_gid" "$USERNAME"
-  chown -R "${new_uid}:${new_gid}" "/home/$USERNAME"
+  chown -R "${new_uid}:${new_gid}" "$USER_HOME"
   log "remapped $USERNAME to ${new_uid}:${new_gid}"
 }
 

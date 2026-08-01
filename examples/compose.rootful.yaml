@@ -1,0 +1,16 @@
+services:
+  vivarium:
+    build:
+      args:
+        USERNAME: agent
+        USER_UID: "${VIVARIUM_ROOTFUL_UID:-1000}"
+        USER_GID: "${VIVARIUM_ROOTFUL_GID:-1000}"
+        USER_HOME: /home/agent
+    volumes: !override
+      - type: bind
+        source: ./workspace
+        target: /workspace
+
+      - vivarium-cache:/home/agent/.cache
+      - vivarium-go:/home/agent/go
+      - vivarium-state:/home/agent/.local/state

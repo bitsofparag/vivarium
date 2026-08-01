@@ -5,9 +5,11 @@ services:
       args:
         PYTHON_VERSION: "3.13"
         NODE_MAJOR: "22"
-        # Rootful docker: your host uid/gid. Rootless docker: 0/0. See README.
-        USER_UID: "${VIVARIUM_UID:-1000}"
-        USER_GID: "${VIVARIUM_GID:-1000}"
+        # Rootless Docker is the default. See README for the rootful override.
+        USERNAME: root
+        USER_UID: "0"
+        USER_GID: "0"
+        USER_HOME: /root
         INCLUDE_RUST: "${VIVARIUM_INCLUDE_RUST:-0}"
         INCLUDE_ZIG: "${VIVARIUM_INCLUDE_ZIG:-1}"
         INCLUDE_DOCS: "${VIVARIUM_INCLUDE_DOCS:-1}"
@@ -30,9 +32,9 @@ services:
         source: ./workspace
         target: /workspace
 
-      - vivarium-cache:/home/agent/.cache
-      - vivarium-go:/home/agent/go
-      - vivarium-state:/home/agent/.local/state
+      - vivarium-cache:/root/.cache
+      - vivarium-go:/root/go
+      - vivarium-state:/root/.local/state
 
     environment:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}

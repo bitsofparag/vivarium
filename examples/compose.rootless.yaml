@@ -1,6 +1,0 @@
-services:
-  vivarium:
-    build:
-      args:
-        USER_UID: "0"
-        USER_GID: "0"
