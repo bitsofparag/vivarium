@@ -25,9 +25,19 @@ jobs:
 
       - uses: docker/setup-buildx-action@v4
 
-      - run: just build
+      - run: just security-contract
 
-      - run: just smoke
+      - run: just identity-contract
+
+      # GitHub-hosted Docker is rootful; exercise default image identity without
+      # claiming the daemon itself is rootless.
+      - run: just _build
+
+      - run: just _smoke
+
+      - run: just build-rootful
+
+      - run: just smoke-rootful
 
   publish:
     if: github.event_name != 'pull_request'
