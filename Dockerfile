@@ -134,7 +134,7 @@ SHELL ["/bin/sh", "-eux", "-c"]
 RUN apk add --no-cache \
       bash zsh coreutils findutils grep sed gawk diffutils procps util-linux \
       shadow sudo gosu tini busybox \
-      ca-certificates curl wget openssh-client rsync \
+      ca-certificates tzdata curl wget openssh-client rsync \
       xz zstd pigz unzip zip 7zip libarchive \
       ffmpeg \
       ripgrep fd fzf bat eza tree file less \
