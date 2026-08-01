@@ -27,7 +27,7 @@ ARG CODEGRAPH_VERSION=
 ARG CAVEMAN_REF=v1.9.1
 
 
-# ---- Validate build-time identity settings ---
+# ---- stage 1: Validate build-time identity settings -------------------------
 # If username is root, uid and gid = 0
 # If username is not root, uid and gid > 0
 FROM ${WOLFI_BASE} AS identity
@@ -51,7 +51,7 @@ RUN set -eu; \
     touch /identity-valid
 
 
-# ----- stage 1: go tools with no wolfi package -----
+# ----- stage 2: go tools with no wolfi package -------------------------------
 FROM --platform=$BUILDPLATFORM ${WOLFI_BASE} AS gotools
 
 ARG TARGETOS
@@ -91,7 +91,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     fi
 
 
-# ----- stage 2: upstream static binaries with no wolfi package -----
+# ----- stage 3: upstream static binaries with no wolfi package ---------------
 FROM --platform=$BUILDPLATFORM ${WOLFI_BASE} AS binaries
 
 ARG TARGETARCH
@@ -127,7 +127,7 @@ RUN set -eu; \
 RUN chmod 0755 /out/*
 
 
-# ----- stage 3: runtime -----
+# ----- stage 4: runtime ------------------------------------------------------
 FROM ${WOLFI_BASE} AS runtime-common
 
 ARG PYTHON_VERSION
@@ -195,7 +195,7 @@ RUN for p in tree-sitter actionlint; do \
 COPY --from=gotools  /out/ /usr/local/bin/
 COPY --from=binaries /out/ /usr/local/bin/
 
-# ----- python tooling -----
+# ----- uv-based python tooling -----
 ENV UV_TOOL_DIR=/opt/uv/tools \
     UV_TOOL_BIN_DIR=/usr/local/bin \
     UV_LINK_MODE=copy \
@@ -267,6 +267,7 @@ RUN git config --system --add safe.directory '*' && \
     git config --system delta.navigate true && \
     git config --system delta.line-numbers true
 
+# ----- stage 5: final runtime assembly ---------------------------------------
 FROM runtime-common AS runtime
 
 ARG USERNAME
