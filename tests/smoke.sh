@@ -49,3 +49,12 @@ else:
     raise AssertionError("invalid timezone unexpectedly resolved")
 '
 run_logged docker compose run --rm vivarium python -c "$timezone_check"
+
+python_packages_check='
+import pypdfium2
+from PIL import Image
+
+assert pypdfium2.PdfDocument
+assert Image.new("RGB", (1, 1)).getpixel((0, 0)) == (0, 0, 0)
+'
+run_logged docker compose run --rm vivarium python -c "$python_packages_check"

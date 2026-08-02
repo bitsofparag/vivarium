@@ -202,6 +202,9 @@ ENV UV_TOOL_DIR=/opt/uv/tools \
     UV_PYTHON_DOWNLOADS=manual
 
 RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install --system pypdfium2 pillow
+
+RUN --mount=type=cache,target=/root/.cache/uv \
     uv tool install black && \
     uv tool install isort && \
     uv tool install pylint && \
