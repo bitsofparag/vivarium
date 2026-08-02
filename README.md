@@ -1,39 +1,62 @@
 # vivarium
 
-(Yet another) Docker image for running AI coding agents.
+Docker environment for running AI coding agents.
 
-Vivarium is a containerized development environment for agent runs. It includes **the essentials**, viz. common build, test, lint, shell, Git, container, and supply-chain tools for Go, Python, Node, and general Unix work.
+> [!IMPORTANT]
+> Vivarium defaults to **rootless Docker**, limiting the impact of the agent escaping the container. Rootful compatibility requires an explicit `*-rootful` recipe.
 
-Build the image, publish it if needed, then run an agent with a repo mounted at `/workspace`. The mount is the boundary: files outside the mounted paths are not part of the agent's working area.
-
-
-## Quick-Start
-
-Build the image:
-
-```sh
-just build
-```
-
-Use this when publishing to a registry or configuring a runner such as Hermes. The published image includes the essentials above, as well as Zig, docs tooling, Claude Code/opencode, rtk, CodeGraph, and caveman; but excludes Rust and Semgrep.
-
-For local checks, Compose mounts the repository's `./workspace` directory at `/workspace`:
-
-```sh
-just doctor   # verify the toolchain
-just shell    # interactive shell in /workspace
-```
+- **Purpose:**
+  - Provides common build, test, lint, shell, Git, container, and supply-chain tools.
+  - Supports Go, Python, Node, and general Unix work.
+  - Mounts the working repository at `/workspace`.
 
 
-## What's Inside the Toolchain
+## Quick Start
 
-A Wolfi (glibc) base carrying toolchains for Go, Python and Node, as well as the usual shell, version control, language linting and formatting tooling, container and supply-chain utilities, media conversion, and secrets tooling. In other words, everything an agent needs to build, test and lint a polyglot repo without reaching outside the container.
+- **Requirements:**
+  - Configure [rootless Docker](https://docs.docker.com/engine/security/rootless/).
+  - Install [`just`](https://github.com/casey/just).
 
-You can find the exact inventory at `/etc/vivarium.manifest`, or via `keeper manifest`.
+- **Build and Test:**
 
-### Optional Tools
+  ```sh
+  just build
+  just smoke
+  ```
 
-Each is a build arg. If using Compose, set the matching `VIVARIUM_INCLUDE_*` value in `.env.local`.
+- **Check or Open the Environment:**
+
+  ```sh
+  just doctor
+  just shell
+  ```
+
+- **Run an Agent Task:**
+
+  ```sh
+  docker compose run --rm vivarium keeper run claude -p "fix the lint errors"
+  ```
+
+
+## Toolchain
+
+- **Base:**
+  - Wolfi Linux with glibc.
+
+- **Languages:**
+  - Go, Python, Node, and Zig.
+
+- **Development Tools:**
+  - Shell, Git, linters, formatters, container tools, supply-chain tools, media conversion, documentation, and secrets tooling.
+
+- **Agent Tools:**
+  - Claude Code, opencode, rtk, CodeGraph, and caveman.
+
+- **Exact Inventory:**
+  - Run `keeper manifest` or read `/etc/vivarium.manifest`.
+
+- **Optional Build Features:**
+  - Set the build argument directly or the matching `VIVARIUM_INCLUDE_*` value in `.env.local` when using Compose.
 
 | Build arg           | Adds                  | Size    | Default |
 |---------------------|-----------------------|---------|---------|
@@ -46,72 +69,110 @@ Each is a build arg. If using Compose, set the matching `VIVARIUM_INCLUDE_*` val
 | `INCLUDE_RUST`      | rustup, rust-analyzer | ~1.2 GB | off     |
 | `INCLUDE_SEMGREP`   | semgrep               | ~400 MB | off     |
 
-`RTK_VERSION` pins the rtk release. `CODEGRAPH_VERSION` pins the npm package version or tag. `CAVEMAN_REF` pins the GitHub ref used for the installed `caveman` command.
+- **Version Pins:**
+  - `RTK_VERSION` pins the rtk release.
+  - `CODEGRAPH_VERSION` pins the npm package version or tag.
+  - `CAVEMAN_REF` pins the GitHub ref for the installed `caveman` command.
 
 
 ## How-to
 
-**Match a Python/Node pair:**
+- **Docker Security Mode Options:**
 
-`docker build --build-arg PYTHON_VERSION=3.11 --build-arg NODE_MAJOR=20 -t vivarium .`
+  **Rootless (Default, Safer):**
+  - Use `just build` and `just smoke`. These commands check that Docker runs in rootless mode.
+  - If using Docker or Compose directly, run `just rootless-check` first.
+  - A regular `docker build` creates the same image but won’t verify how it runs later.
 
-**Shrink the image:**
+  **Rootful (For Compatibility):**
+  - Use `just build-rootful` and `just smoke-rootful`.
+  - Automatically uses your host user’s permissions.
+  - If using Compose directly, set `VIVARIUM_ROOTFUL_UID` and `VIVARIUM_ROOTFUL_GID`.
+  - Runs as user `agent` with home directory `/home/agent`, preventing files from being owned by root.
 
-`--build-arg INCLUDE_DOCS=0 --build-arg INCLUDE_ZIG=0 --build-arg INCLUDE_AGENTS=0`
+  **For Hermes:**
+  - In default rootless mode, set `docker_run_as_host_user: false` so Hermes uses `/root` for persistent files.
 
-**Fix "permission denied" on /workspace:**
+- **Change Python or Node Versions:**
 
-`keeper doctor` prints the mount's owner uid:gid.
+  ```sh
+  docker build --build-arg PYTHON_VERSION=3.11 --build-arg NODE_MAJOR=20 -t vivarium .
+  ```
 
-- With Compose or `just build`, set `VIVARIUM_UID`/`VIVARIUM_GID`.
-- With plain `docker build`, pass `USER_UID`/`USER_GID` as build args.
+- **Reduce Image Size:**
 
-**Fix "permission denied" inside a mounted folder:**
+  ```sh
+  docker build \
+    --build-arg INCLUDE_DOCS=0 \
+    --build-arg INCLUDE_ZIG=0 \
+    --build-arg INCLUDE_AGENTS=0 \
+    -t vivarium .
+  ```
 
-`docker_run_as_host_user: true` preserves host Unix permissions. A mounted directory owned by `root` with mode `744` cannot be entered by `agent`, because directory traversal needs execute permission. Fix ownership or ACLs on the host path before starting Hermes:
+- **Fix `/workspace` Permissions:**
+  - Run `keeper doctor` to see the mount owner.
+  - Rootless: ensure the path belongs to the user running Docker.
+  - Rootful: use `just` recipes or set `VIVARIUM_ROOTFUL_UID` and `VIVARIUM_ROOTFUL_GID`.
 
-```sh
-stat -c '%U:%G %a %n' "/path/to/mounted/folder"
-sudo chown -R "$(id -u):$(id -g)" "/path/to/mounted/folder"
-find "/path/to/mounted/folder" -type d -exec chmod u+rwx {} +
-find "/path/to/mounted/folder" -type f -exec chmod u+rw {} +
-```
+- **Fix Mounted Folder Permissions:**
+  - Grant the host user read, write, and directory traversal permissions before starting Hermes.
 
-Use a group ACL instead of `chown` when that folder is shared with other host users. `keeper doctor` reports inaccessible mounted directories under `/workspace` and `/output`.
+  ```sh
+  stat -c '%U:%G %a %n' "/path/to/mounted/folder"
+  sudo chown -R "$(id -u):$(id -g)" "/path/to/mounted/folder"
+  find "/path/to/mounted/folder" -type d -exec chmod u+rwx {} +
+  find "/path/to/mounted/folder" -type f -exec chmod u+rw {} +
+  ```
 
-**Run under rootless Docker:**
+  - Use a group ACL instead of `chown` for shared folders.
+  - `keeper doctor` reports inaccessible directories under `/workspace` and `/output`.
 
-The container uid 0 maps to your host user (uid 1000). Therefore, build the Compose image with `VIVARIUM_UID=0 VIVARIUM_GID=0 just build`, or pass `--build-arg USER_UID=0 --build-arg USER_GID=0` to `docker build`. In Hermes, use `docker_run_as_host_user: false` for this shape.
+- **Use Agent Helper Commands:**
+  - Vivarium includes `rtk`, `codegraph`, and `caveman`.
+  - Their initialization commands are not run during the image build because they write user or project configuration.
+  - Initialize them only in persisted paths, such as a mounted repository or agent configuration directory.
 
-**Run a single agent task:** `docker compose run --rm vivarium keeper run claude -p "fix the lint errors"`
+- **Transcribe Audio:**
+  - Vivarium includes `ffmpeg` and `transcribe-audio`, but no Whisper models.
 
-**Agent helper CLIs:**
+  ```sh
+  transcribe-audio meeting.m4a > meeting.txt
+  ```
 
-Vivarium includes `rtk`, `codegraph`, and `caveman` as commands. Their init/install commands are intentionally not run during image build, because they write user, agent, or project config. Run those commands only in a persisted location, such as a mounted repo for `.codegraph/` or a mounted agent config directory.
+  - Backend order: `TRANSCRIBE_URL`, OpenAI when `OPENAI_API_KEY` is set, then local `whisper-cli` when `WHISPER_MODEL` points to a mounted model.
+  - Keep large models and Whisper servers outside the base image.
 
-**Transcribe audio:**
-
-Vivarium includes `ffmpeg` and a `transcribe-audio` helper, but no Whisper model files. Configure transcription at the runner level:
-
-```sh
-transcribe-audio meeting.m4a > meeting.txt
-```
-
-`transcribe-audio` uses `TRANSCRIBE_URL` first, then OpenAI's transcription API when `OPENAI_API_KEY` is set, then a local `whisper-cli` only when `WHISPER_MODEL` points at a mounted model. Keep large models or Whisper servers outside the base image.
-
-**Run Docker commands inside Vivarium:**
-
-Vivarium includes Docker client tools, not a daemon. If an agent should control a host Docker daemon, configure that socket mount in the runner and treat it as trusted access to the host.
+- **Run Docker Commands Inside Vivarium:**
+  - Vivarium includes Docker client tools, not a Docker daemon.
+  - Mount a host Docker socket only for trusted agents. It grants control of that Docker host.
 
 
 ## FAQ
 
-**Why Wolfi?** It is glibc-based, so binaries built inside the container behave the same as on a mainstream Linux host; musl (Alpine) would diverge. It also ships a rolling package set rather than a frozen release.
+- **Why Wolfi?**
+  - Uses glibc, matching mainstream Linux environments more closely than musl-based Alpine.
+  - Provides a rolling package set.
 
-**Does this sandbox the agent?** An agent working inside a vivarium can only touch the folders you handed it. If it deletes a file not in the mounted folder, installs a broken package, or fills the disk with build junk, the mess stays inside the container and your machine is unchanged. Delete the container and it is all gone.
+- **Does Vivarium Sandbox the Agent?**
+  - Rootless Docker limits host privilege.
+  - Writable mounts remain writable. An agent can change or delete their contents.
+  - Unmounted host paths remain outside the container's normal filesystem view.
+  - Network access remains enabled unless explicitly disabled.
 
-**But LLMs could break out of the sandbox?** Yes, and I get asked this a lot. This project is built to stop accidents, and may not stop an agent from deliberately trying to break out. Top frontier models have been shown not to respect isolated environments. However, if this concerns you greatly, launch the vivarium container on a stronger runtime, e.g `docker run --runtime=runsc` for gVisor, or Kata Containers for a lightweight VM. Always remember that anything you mount as writable really can be changed or deleted, so mount only what the task needs. And the agent still has full internet access unless you turn networking off.
+- **Can an Agent Escape the Container?**
+  - Vivarium reduces accidental damage but does not guarantee containment against a deliberate escape attempt.
+  - Use gVisor with `docker run --runtime=runsc` or Kata Containers for stronger isolation.
+  - Mount only the files required for the task.
 
-**Can I bring my own agent?** Yes, and that is rather the point. The two agent CLIs that ship by default sit behind a build arg, so `INCLUDE_AGENTS=0` gives you a bare environment with no opinion about what runs in it. Install whatever you prefer with npm, uv, or `go install`, or drop a static binary into `/usr/local/bin`. Nothing in the image is tied to a particular agent; `keeper run <name>` simply hands off to whatever it finds on your PATH. The toolchain is the part worth keeping, so changing your mind about the agent should not mean rebuilding your setup. The one thing that will not fit is an agent that needs a desktop session or direct access to your host.
+- **Can I Use Another Agent?**
+  - Yes. Nothing in the image requires Claude Code or opencode.
+  - Set `INCLUDE_AGENTS=0` for an image without the bundled agent CLIs.
+  - Install another agent with npm, uv, `go install`, or a static binary.
+  - `keeper run <name>` runs any matching command found on `PATH`.
+  - Desktop agents and agents requiring direct host access are not supported.
 
-**Is the image reproducible everywhere?** Two different things get called reproducible here, and only one of them is true today. A given image runs the same anywhere. Pull it by digest and you get identical bits on any amd64 or arm64 machine, which is what most people actually mean by the question. Rebuilding it from this Dockerfile is a different matter: the base is `:latest`, the Go tools install from `@latest`, and the npm packages are unpinned, so a build today and a build next month will not match. Wolfi also keeps only the current version of each package, so pinning something like `python-3.11` works right up until it is retired. If byte-for-byte rebuilds matter to you, pin the base by digest, pin the Go tools to release tags, and add a lockfile for the npm globals. Until then, pull by digest and hold on to `/etc/vivarium.manifest`, which records exactly what a given image contained.
+- **Is the Image Reproducible?**
+  - Pulling the same digest returns identical image contents for that platform.
+  - Rebuilding later may differ because the base image, Go tools, and npm packages are not fully pinned.
+  - For stricter rebuilds, pin the base digest and tool versions, then lock npm packages.
+  - Keep `/etc/vivarium.manifest` as the installed package record.
